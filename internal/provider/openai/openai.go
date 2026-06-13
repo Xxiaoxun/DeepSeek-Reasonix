@@ -382,7 +382,27 @@ func (c *client) readStream(ctx context.Context, resp *http.Response, out chan<-
 		default:
 		}
 		line := strings.TrimSpace(scanner.Text())
-		if line == "" || !strings.HasPrefix(line, "data:") {
+		if line == "" {
+			continue
+		}
+		// Handle SSE event type lines. Some OpenAI-compatible providers (DeepSeek,
+		// MiMo, etc.) send `event: heartbeat` or `event: ping` during long thinking
+		// to keep the connection alive. Forward those to the agent as ChunkPing so
+		// its 30s stall detector resets — otherwise a long reasoner gap would falsely
+		// trip the "still thinking…" notice (or worse, a future timeout) even though
+		// the connection is fine.
+		if strings.HasPrefix(line, "event:") {
+			eventType := strings.TrimSpace(strings.TrimPrefix(line, "event:"))
+			if eventType == "ping" || eventType == "heartbeat" {
+				select {
+				case out <- provider.Chunk{Type: provider.ChunkPing}:
+				case <-ctx.Done():
+					return emitted, ctx.Err()
+				}
+			}
+			continue
+		}
+		if !strings.HasPrefix(line, "data:") {
 			continue
 		}
 		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))

@@ -72,6 +72,7 @@ export type Item =
 interface State {
   items: Item[];
   running: boolean;
+  cancelling: boolean; // true after user clicks Stop, cleared on turn_done
   turnActive: boolean;
   approval?: WireApproval;
   ask?: WireAsk;
@@ -101,6 +102,7 @@ interface State {
 export const initialState: State = {
   items: [],
   running: false,
+  cancelling: false,
   turnActive: false,
   context: { used: 0, window: 0, sessionTokens: 0 },
   jobs: [],
@@ -187,6 +189,7 @@ type Action =
   | { type: "unsend" }
   | { type: "send_failed"; error: string }
   | { type: "backend_status"; running: boolean }
+  | { type: "cancelling" }
   | { type: "meta"; meta: Meta }
   | { type: "context"; context: ContextInfo }
   | { type: "balance"; balance: BalanceInfo }
@@ -323,7 +326,7 @@ function flushPendingUser(s: State): State {
 
 function applyEvent(s: State, e: WireEvent): State {
   if (s.discardTurn) {
-    if (e.kind === "turn_done") return { ...s, discardTurn: false, running: false, turnActive: false, currentAssistant: undefined, live: undefined };
+    if (e.kind === "turn_done") return { ...s, discardTurn: false, running: false, cancelling: false, turnActive: false, currentAssistant: undefined, live: undefined };
     return s;
   }
   if (s.pendingUser !== undefined && e.kind !== "turn_done") {
@@ -458,8 +461,8 @@ function applyEvent(s: State, e: WireEvent): State {
         if (it.kind === "tool" && it.status === "running") return { ...it, status: "stopped" as const };
         return it;
       });
-      let items: Item[] = e.err ? [...finalized, { kind: "notice", id: `e${s.seq}`, level: "warn", text: e.err }] : finalized;
-      return { ...s, items, live: undefined, running: false, turnActive: false, currentAssistant: undefined, approval: undefined, ask: undefined, seq: s.seq + 1 };
+      const items: Item[] = e.err ? [...finalized, { kind: "notice", id: `e${s.seq}`, level: "warn", text: e.err }] : finalized;
+      return { ...s, items, live: undefined, running: false, cancelling: false, turnActive: false, currentAssistant: undefined, approval: undefined, ask: undefined, seq: s.seq + 1 };
     }
     default: return s;
   }
@@ -505,6 +508,7 @@ export function reducer(s: State, a: Action): State {
       });
       return { ...s, items: finalized, running: false, turnActive: false, live: undefined, currentAssistant: undefined, approval: undefined, ask: undefined };
     }
+    case "cancelling": return { ...s, cancelling: true };
     case "meta": return sameMeta(s.meta, a.meta) ? s : { ...s, meta: a.meta };
     case "context": {
       const sessionTokens = typeof a.context.sessionTokens === "number"

@@ -305,6 +305,7 @@ export const en = {
 
   // composer
   "composer.placeholder": "Message Reasonix…  ( / commands · @ files · ! shell )",
+  "composer.cancelling": "cancelling…",
   "composer.normalMode": "chat mode",
   "composer.normalModeDesc": "Answer or work directly.",
   "composer.planMode": "plan mode",

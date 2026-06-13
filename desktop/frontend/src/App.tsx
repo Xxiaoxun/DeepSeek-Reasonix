@@ -2730,9 +2730,11 @@ export default function App() {
             )}
             <Composer
               running={state.running}
+              cancelling={state.cancelling}
               collaborationMode={collaborationMode}
               toolApprovalMode={toolApprovalMode}
               tokenMode={tokenMode}
+              mode={collaborationMode === "plan" ? "plan" : "normal"}
               goal={goal}
               cwd={state.meta?.cwd}
               modelLabel={state.meta?.label ?? t("status.connecting")}

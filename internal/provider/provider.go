@@ -265,6 +265,7 @@ const (
 	ChunkUsage                          // token usage for the completion
 	ChunkDone                           // completion finished normally
 	ChunkError                          // an error occurred
+	ChunkPing                           // keepalive signal (connection alive, no content yet)
 )
 
 // Usage reports token accounting for a completion. Cache hit/miss come from

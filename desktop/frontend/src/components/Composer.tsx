@@ -320,9 +320,11 @@ async function buildSessionContext(refs: SessionReference[]): Promise<string> {
 
 export function Composer({
   running,
+  cancelling = false,
   collaborationMode,
   toolApprovalMode,
   tokenMode,
+  mode: _mode,
   goal,
   cwd,
   modelLabel,
@@ -350,9 +352,11 @@ export function Composer({
   transientDismissSignal,
 }: {
   running: boolean;
+  cancelling?: boolean;
   collaborationMode: CollaborationMode;
   toolApprovalMode: ToolApprovalMode;
   tokenMode: TokenMode;
+  mode: Mode;
   goal?: string;
   cwd?: string;
   modelLabel: string;
@@ -1501,15 +1505,17 @@ export function Composer({
   };
   const runActivity = retry
     ? t("status.retrying", { attempt: retry.attempt, max: retry.max })
-    : running && turnStartAt
-      ? (() => {
-          const elapsedMs = Math.max(0, now - turnStartAt);
-          const words = SPINNER_WORDS[locale];
-          const word = words[Math.floor(elapsedMs / 3000) % words.length];
-          const tok = turnTokens && turnTokens > 0 ? ` · ↓ ${fmtTokens(turnTokens)} ${t("status.tokens")}` : "";
-          return `${word}… ${fmtElapsed(elapsedMs)}${tok}`;
-        })()
-      : null;
+    : cancelling
+      ? t("composer.cancelling")
+      : running && turnStartAt
+        ? (() => {
+            const elapsedMs = Math.max(0, now - turnStartAt);
+            const words = SPINNER_WORDS[locale];
+            const word = words[Math.floor(elapsedMs / 3000) % words.length];
+            const tok = turnTokens && turnTokens > 0 ? ` · ↓ ${fmtTokens(turnTokens)} ${t("status.tokens")}` : "";
+            return `${word}… ${fmtElapsed(elapsedMs)}${tok}`;
+          })()
+        : null;
   const composerMetaClass = [
     "composer-meta",
     hasEffort ? "composer-meta--has-effort" : "composer-meta--no-effort",
